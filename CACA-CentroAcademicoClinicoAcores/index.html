@@ -275,35 +275,46 @@
         </div>
     </footer>
     <button id="to-top" class='btn btn-primary' title="Para o Topo">Voltar ao Topo</button>
+<!-- botao de admin -->
+<button id="admin-toggle" class="btn btn-primary" style="margin:20px;">
+    Administração
+</button>
 
-    -- Secção de Gestão de Eventos --
-<section id="gestao-eventos" style="padding: 2rem; background: var(--bg-color); border: 1px solid var(--accent-color);">
+<!-- Secção escondida inicialmente -->
+<section id="gestao-eventos" style="display:none; padding: 2rem; background: var(--bg-color); border: 1px solid var(--accent-color);">
     <h2>Painel de Gestão - Adicionar Novo Evento</h2>
+
     <form id="form-gestao-evento">
         <div>
-            <label for="evento-titulo">Título do Evento:</label>
+            <label>Título:</label>
             <input type="text" id="evento-titulo" required>
         </div>
+
         <div>
-            <label for="evento-descricao">Descrição:</label>
+            <label>Descrição:</label>
             <textarea id="evento-descricao" required></textarea>
         </div>
+
         <div>
-            <label for="evento-data">Data:</label>
+            <label>Data:</label>
             <input type="date" id="evento-data" required>
         </div>
+
         <div>
-            <label for="evento-hora">Hora:</label>
+            <label>Hora:</label>
             <input type="time" id="evento-hora" required>
         </div>
+
         <div>
-            <label for="evento-local">Localização:</label>
+            <label>Local:</label>
             <input type="text" id="evento-local" required>
         </div>
-        <button type="submit" style="margin-top: 1rem;">Adicionar Evento à Base de Dados</button>
+
+        <button type="submit">Guardar Evento</button>
     </form>
-    <p id="gestao-feedback" style="margin-top: 1rem; font-weight: bold;"></p>
-</section>
+
+    <p id="gestao-feedback"></p>
+    </section>
     
     <script src="./JavaScript/script.js" type="module"></script>
     <script src="./JavaScript/graficos.js" type="module"></script>

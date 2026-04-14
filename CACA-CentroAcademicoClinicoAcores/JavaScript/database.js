@@ -63,3 +63,28 @@ export function getEventosDB(db) {
         request.onerror = () => reject("Erro ao obter eventos da base de dados.")
     })
 }
+// Atualizar evento
+export function updateEventDB(db, evento) {
+    return new Promise((resolve, reject) => {
+        const transacao = db.transaction(["eventos"], "readwrite")
+        const store = transacao.objectStore("eventos")
+
+        const request = store.put(evento) 
+
+        request.onsuccess = () => resolve("Evento atualizado com sucesso!")
+        request.onerror = () => reject("Erro ao atualizar evento.")
+    })
+}
+
+// Remover evento
+export function deleteEventDB(db, id) {
+    return new Promise((resolve, reject) => {
+        const transacao = db.transaction(["eventos"], "readwrite")
+        const store = transacao.objectStore("eventos")
+
+        const request = store.delete(id)
+
+        request.onsuccess = () => resolve("Evento removido com sucesso!")
+        request.onerror = () => reject("Erro ao remover evento.")
+    })
+}

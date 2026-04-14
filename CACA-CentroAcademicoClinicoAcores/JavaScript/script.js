@@ -1,6 +1,7 @@
 import { Evento } from "./evento.js"
-import { startDB, addEventDB, addSubscritorDB,getEventosDB } from "./database.js"
+import { startDB, addEventDB, addSubscritorDB,getEventosDB, updateEventDB, deleteEventDB } from "./database.js"
 let db
+let eventoEmEdicao = null
 document.addEventListener('DOMContentLoaded', () => {
     /*
     DOM ELEMENTS & CONSTANTS
@@ -78,7 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventPrevBtn = document.getElementById('event-prev')
     const eventNextBtn = document.getElementById('event-next')
 
+    // ADMIN TOGGLE
+    const adminBtn = document.getElementById("admin-toggle")
+    const secaoAdmin = document.getElementById("gestao-eventos")
 
+    adminBtn.addEventListener("click", () => {
+        if (secaoAdmin.style.display === "none") {
+            secaoAdmin.style.display = "block"
+        } else {
+            secaoAdmin.style.display = "none"
+        }
+    })
 
     /*
     STATE VARIABLES
@@ -406,46 +417,60 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener("submit", validadeForm)
         // Listener do Formulário de Gestão de Eventos
     if (formGestaoEvento) {
-        formGestaoEvento.addEventListener("submit", async (e) => {
-            e.preventDefault(); // Impede o recarregamento da página
+    formGestaoEvento.addEventListener("submit", async (e) => {
+        e.preventDefault(); // Impede o recarregamento da página
 
-            // Limpa mensagens anteriores
-            feedbackGestao.textContent = ""
-            feedbackGestao.style.color = "initial"
+        // Limpa mensagens anteriores
+        feedbackGestao.textContent = ""
+        feedbackGestao.style.color = "initial"
 
-            // Cria o objeto Evento com a classe
-            const novoEvento = new Evento(
-                inputGestaoTitulo.value.trim(),
-                inputGestaoDescricao.value.trim(),
-                inputGestaoData.value,
-                inputGestaoHora.value,
-                inputGestaoLocal.value.trim()
-            );
-
-            try {
-                if(!db){
-                    throw new Error("Base de dados não está pronta. Tente de novo.")
-                }
-
-                // Guarda o evento na IndexedDB
-                const mensagem = await addEventDB(db, novoEvento)
-                
-                // Feedback visual de sucesso
-                feedbackGestao.textContent = "Sucesso: " + mensagem
-                feedbackGestao.style.color = "green"
-                
-                formGestaoEvento.reset()
-                await renderEventos()
-                // dps vai ter função para atualizar o carrossel
-                // atualizarCarrossel(); 
-
-            } catch (erro) {
-                console.error(erro);
-                feedbackGestao.textContent = "Erro ao guardar: " + erro.message;
-                feedbackGestao.style.color = "red";
+        try {
+            if (!db) {
+                throw new Error("Base de dados não está pronta. Tente de novo.")
             }
-        });
-    }
+
+            let mensagem
+
+            if (eventoEmEdicao) {
+                // EDITAR EVENTO
+                eventoEmEdicao.titulo = inputGestaoTitulo.value.trim()
+                eventoEmEdicao.descricao = inputGestaoDescricao.value.trim()
+                eventoEmEdicao.data = inputGestaoData.value
+                eventoEmEdicao.hora = inputGestaoHora.value
+                eventoEmEdicao.local = inputGestaoLocal.value.trim()
+
+                mensagem = await updateEventDB(db, eventoEmEdicao)
+
+                eventoEmEdicao = null // sai do modo edição
+
+            } else {
+                // ADICIONAR EVENTO 
+                const novoEvento = new Evento(
+                    inputGestaoTitulo.value.trim(),
+                    inputGestaoDescricao.value.trim(),
+                    inputGestaoData.value,
+                    inputGestaoHora.value,
+                    inputGestaoLocal.value.trim()
+                )
+
+                mensagem = await addEventDB(db, novoEvento)
+            }
+
+            // Feedback visual de sucesso
+            feedbackGestao.textContent = "Sucesso: " + mensagem
+            feedbackGestao.style.color = "green"
+
+            formGestaoEvento.reset()
+
+            await renderEventos()
+
+        } catch (erro) {
+            console.error(erro)
+            feedbackGestao.textContent = "Erro ao guardar: " + erro.message
+            feedbackGestao.style.color = "red"
+        }
+    })
+}
 
     
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
@@ -482,32 +507,72 @@ async function renderEventos() {
     trackDinamico.innerHTML = '' // limpa o contentor antes de adicionar os eventos
     eventos.forEach(evento => {
         const data = new Date(evento.data)
-        const dia = data.getDate()
-        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-        const mes = meses[data.getMonth()]
+            const dia = data.getDate()
 
-        const article = document.createElement("article")
-        article.classList.add("event-card")
-        article.innerHTML = ` 
-        <div class="card-image">
-                    <!-- Como ainda não temos fotos dinâmicas, usamos uma genérica -->
-                    <img src="./media/evento1.png" alt="Imagem do Evento">
-                    <div class="date-badge">
-                        <span class="day">${dia}</span>
-                        <span class="month">${mes}</span>
-                    </div>
+            const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+            const mes = meses[data.getMonth()]
+
+            const article = document.createElement("article")
+            article.classList.add("event-card")
+
+            article.innerHTML = `
+            <div class="card-image">
+                <img src="./media/evento1.png">
+                <div class="date-badge">
+                    <span class="day">${dia}</span>
+                    <span class="month">${mes}</span>
                 </div>
-                <div class="card-content">
-                    <h4>${evento.titulo}</h4>
-                    <p class="meta">🕒 ${evento.hora}</p>
-                    <p class="meta">📍 ${evento.local}</p>
-                    <p style="font-size: 0.9rem; margin-top: 10px;">${evento.descricao}</p>
+            </div>
+
+            <div class="card-content">
+                <h4>${evento.titulo}</h4>
+                <p class="meta">🕒 ${evento.hora}</p>
+                <p class="meta">📍 ${evento.local}</p>
+                <p>${evento.descricao}</p>
+
+                <div class="admin-buttons" style="display:none;">
+                    <button onclick="editarEvento(${evento.id})">Editar</button>
+                    <button onclick="removerEvento(${evento.id})">Remover</button>
                 </div>
-        `
-        trackDinamico.appendChild(article) 
-    })
-    } catch (error) {
-        console.error("Erro ao carregar eventos: ", error)
-        trackDinamico.innerHTML = '<p style="text-align: center; width: 100%; padding: 2rem; color: red;">Erro ao carregar eventos.</p>'
+            </div>
+            `
+
+            // MOSTRAR BOTÕES AO CLICAR
+            article.addEventListener("click", () => {
+                const btns = article.querySelector(".admin-buttons")
+                btns.style.display = btns.style.display === "none" ? "block" : "none"
+            })
+
+            trackDinamico.appendChild(article)
+        })
+        } catch (error) {
+        console.error(error)
     }
-} 
+}
+
+/*EDITAR EVENTO */
+window.editarEvento = async function(id) {
+    const eventos = await getEventosDB(db)
+    const evento = eventos.find(e => e.id === id)
+
+    if (!evento) return
+
+    document.getElementById("evento-titulo").value = evento.titulo
+    document.getElementById("evento-descricao").value = evento.descricao
+    document.getElementById("evento-data").value = evento.data
+    document.getElementById("evento-hora").value = evento.hora
+    document.getElementById("evento-local").value = evento.local
+
+    eventoEmEdicao = evento
+}
+/*Remover EVENTO */
+window.removerEvento = async function(id) {
+    if (!confirm("Apagar evento?")) return
+
+    try {
+        await deleteEventDB(db, id)
+        await renderEventos()
+    } catch (erro) {
+        console.error(erro)
+    }
+}
