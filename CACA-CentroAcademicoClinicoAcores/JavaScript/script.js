@@ -2,6 +2,14 @@ import { Evento } from "./evento.js"
 import { startDB, addEventDB, addSubscritorDB,getEventosDB, updateEventDB, deleteEventDB } from "./database.js"
 let db
 let eventoEmEdicao = null
+const coordenadasAcores = {
+    "Ponta Delgada": { lat: 37.7412, lon: -25.6756 },
+    "Angra do Heroísmo": { lat: 38.6533, lon: -27.2178 },
+    "Horta": { lat: 38.5333, lon: -28.6333 },
+    "Ribeira Grande": { lat: 37.8167, lon: -25.5167 },
+    "Lagoa": { lat: 37.7500, lon: -25.5667 }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     /*
     DOM ELEMENTS & CONSTANTS
@@ -505,13 +513,12 @@ async function renderEventos() {
             return
         }
     trackDinamico.innerHTML = '' // limpa o contentor antes de adicionar os eventos
-    eventos.forEach(evento => {
+    for (const evento of eventos) {
         const data = new Date(evento.data)
             const dia = data.getDate()
-
             const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
             const mes = meses[data.getMonth()]
-
+            const previsao = await obterPrevisaoEvento(evento.local, evento.data)
             const article = document.createElement("article")
             article.classList.add("event-card")
 
@@ -528,6 +535,7 @@ async function renderEventos() {
                 <h4>${evento.titulo}</h4>
                 <p class="meta">🕒 ${evento.hora}</p>
                 <p class="meta">📍 ${evento.local}</p>
+                <p class="meta">Previsão: ${previsao}</p>
                 <p>${evento.descricao}</p>
 
                 <div class="admin-buttons" style="display:none;">
@@ -544,7 +552,7 @@ async function renderEventos() {
             })
 
             trackDinamico.appendChild(article)
-        })
+        }
         } catch (error) {
         console.error(error)
     }
@@ -574,5 +582,40 @@ window.removerEvento = async function(id) {
         await renderEventos()
     } catch (erro) {
         console.error(erro)
+    }
+}
+
+async function obterPrevisaoEvento(local, dataEvento) {
+
+    const localizacao = coordenadasAcores[local]
+    if (!localizacao) return "🌤️ (Local não mapeado)"
+
+    const hoje = new Date()
+    const dataEv = new Date(dataEvento)
+    const diferencaDias = Math.ceil((dataEv - hoje) / (1000 * 60 * 60 * 24))
+
+    if (diferencaDias < 0 || diferencaDias > 14) {
+        return "📅 (Previsão disponível 14 dias antes)"
+    }
+
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${localizacao.lat}&longitude=${localizacao.lon}&daily=temperature_2m_max,weathercode&start_date=${dataEvento}&end_date=${dataEvento}&timezone=auto`
+        
+        const resposta = await fetch(url)
+        const dados = await resposta.json()
+        
+        if (!dados.daily) return "🌤️"
+
+        const tempMax = dados.daily.temperature_2m_max[0]
+        const codigoTempo = dados.daily.weathercode[0]
+
+        // Tradução simples de códigos de tempo para emojis
+        let emoji = "☁️"
+        if (codigoTempo <= 3) emoji = "☀️"
+        else if (codigoTempo >= 51 && codigoTempo <= 67) emoji = "🌧️"
+
+        return `${emoji} ${tempMax}°C`
+    } catch (erro) {
+        return "🌤️"
     }
 }
